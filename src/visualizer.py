@@ -8,7 +8,7 @@ Colors = ['orange', 'blue', 'green']
 
 
 class Animation:
-  def __init__(self, map_size, obstacles, schedule, charging_loc, delivery_loc):
+  def __init__(self, map_size, obstacles, schedule, charging_loc, delivery_loc, agent_id):
     self.schedule = schedule
     self.combined_schedule = schedule
     
@@ -24,8 +24,10 @@ class Animation:
     # create boundary patch
     xmin = -0.5
     ymin = -0.5
-    xmax = map_size[0] + 1.5
-    ymax = map_size[1] - 0.5
+    xmax = map_size[1] + 1.5
+    ymax = map_size[0] - 0.5
+
+    print(f"xmin: {xmin}, xmax: {xmax}, ymin: {ymin}, ymax: {ymax}")
 
     plt.xlim(xmin, xmax)
     plt.ylim(ymin, ymax)
@@ -49,10 +51,14 @@ class Animation:
     # for d, i in zip(map["agents"], range(0, len(map["agents"]))):
     #   self.patches.append(Rectangle((d["goal"][0] - 0.25, d["goal"][1] - 0.25), 0.5, 0.5, facecolor=Colors[0], edgecolor='black', alpha=0.5))
     
-    for agent in schedule:
+    for i, agent in enumerate(schedule):
       name = agent
-      self.agents[name] = Circle((schedule[agent][0]['x'], schedule[agent][0]['y']), 0.3, facecolor=Colors[0], edgecolor='black')
-      self.agents[name].original_face_color = Colors[0]
+      if agent_id == i:
+        self.agents[name] = Circle((schedule[agent][0]['x'], schedule[agent][0]['y']), 0.3, facecolor=Colors[1], edgecolor='black')
+        self.agents[name].original_face_color = Colors[1]
+      else:
+        self.agents[name] = Circle((schedule[agent][0]['x'], schedule[agent][0]['y']), 0.3, facecolor=Colors[0], edgecolor='black')
+        self.agents[name].original_face_color = Colors[0]
       self.patches.append(self.agents[name])
       self.T = max(self.T, schedule[name][-1]['t'])
       self.agent_names[name] = self.ax.text(schedule[agent][0]['x'], schedule[agent][0]['y'], name.replace('agent', ''), color='red')
@@ -126,7 +132,7 @@ class Animation:
     return pos
 
 
-def visualize(map_dimensions : tuple, obstacles : list, schedule : list, charging_loc : list, delivery_loc : list, video : str = None, speed : int = 1):
+def visualize(map_dimensions : tuple, obstacles : list, schedule : list, charging_loc : list, delivery_loc : list, agent_id : int, video : str = None, speed : int = 1):
   combined_schedule = {}
    
   for robot_num, sequence in enumerate(schedule):
@@ -135,7 +141,7 @@ def visualize(map_dimensions : tuple, obstacles : list, schedule : list, chargin
       robot_path.append({'t':i, 'x':step[0], 'y':step[1]})
     combined_schedule['agent'+str(robot_num)] = robot_path
   
-  animation = Animation(map_dimensions, obstacles, combined_schedule, charging_loc, delivery_loc)
+  animation = Animation(map_dimensions, obstacles, combined_schedule, charging_loc, delivery_loc, agent_id)
   
 
   if video:
