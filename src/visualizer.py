@@ -8,9 +8,11 @@ Colors = ['orange', 'blue', 'green']
 
 
 class Animation:
-  def __init__(self, map_size, obstacles, schedule, charging_loc, delivery_loc, agent_id):
+  def __init__(self, map_size, obstacles, schedule, charging_loc, delivery_loc, agent_id, agent_statuses=None, agent_goal_locations=None):
     self.schedule = schedule
     self.combined_schedule = schedule
+    self.agent_statuses = agent_statuses
+    self.agent_goal_locations = agent_goal_locations
     
     self.fig = plt.figure(frameon=False, figsize=(16, 9), dpi=1920/16)
     self.ax = self.fig.add_subplot(111, aspect='equal')
@@ -21,6 +23,9 @@ class Animation:
     self.artists = []
     self.agents = dict()
     self.agent_names = dict()
+    self.packages = dict()  # Store package rectangles for each agent
+    self.goals = dict()  # Store goal rectangles for each agent
+    self.goal_texts = dict()  # Store goal text labels for each agent
     # create boundary patch
     xmin = -0.5
     ymin = -0.5
@@ -54,17 +59,37 @@ class Animation:
     for i, agent in enumerate(schedule):
       name = agent
       if agent_id == i:
-        self.agents[name] = Circle((schedule[agent][0]['x'], schedule[agent][0]['y']), 0.3, facecolor=Colors[1], edgecolor='black')
-        self.agents[name].original_face_color = Colors[1]
+        self.agents[name] = Circle((schedule[agent][0]['x'], schedule[agent][0]['y']), 0.3, facecolor='black', edgecolor='black')
+        self.agents[name].original_face_color = 'black'
       else:
-        self.agents[name] = Circle((schedule[agent][0]['x'], schedule[agent][0]['y']), 0.3, facecolor=Colors[0], edgecolor='black')
-        self.agents[name].original_face_color = Colors[0]
+        self.agents[name] = Circle((schedule[agent][0]['x'], schedule[agent][0]['y']), 0.3, facecolor='black', edgecolor='black')
+        self.agents[name].original_face_color = 'black'
       self.patches.append(self.agents[name])
       self.T = max(self.T, schedule[name][-1]['t'])
-      self.agent_names[name] = self.ax.text(schedule[agent][0]['x'], schedule[agent][0]['y'], name.replace('agent', ''), color='red')
+      self.agent_names[name] = self.ax.text(schedule[agent][0]['x'], schedule[agent][0]['y'], name.replace('agent', ''), color='white')
       self.agent_names[name].set_horizontalalignment('center')
       self.agent_names[name].set_verticalalignment('center')
       self.artists.append(self.agent_names[name])
+      
+      # Create package rectangle for this agent (initially invisible)
+      package = Rectangle((schedule[agent][0]['x'] - 0.2, schedule[agent][0]['y'] + 0.4), 0.4, 0.3, 
+                         facecolor='brown', edgecolor='brown', alpha=0.8, visible=False)
+      self.packages[name] = package
+      self.patches.append(package)
+      
+      # Create goal rectangle for this agent (initially invisible)
+      goal = Rectangle((schedule[agent][0]['x'] - 0.25, schedule[agent][0]['y'] - 0.25), 0.5, 0.5, 
+                      facecolor='green', edgecolor='green', alpha=0.6, visible=False)
+      self.goals[name] = goal
+      self.patches.append(goal)
+      
+      # Create goal text label for this agent (initially invisible)
+      goal_text = self.ax.text(schedule[agent][0]['x'], schedule[agent][0]['y'], name.replace('agent', ''), 
+                              color='white', fontweight='bold', visible=False)
+      goal_text.set_horizontalalignment('center')
+      goal_text.set_verticalalignment('center')
+      self.goal_texts[name] = goal_text
+      self.artists.append(goal_text)
 
     self.anim = animation.FuncAnimation(self.fig, self.animate_func,
                                init_func=self.init_func,
@@ -89,11 +114,64 @@ class Animation:
     return self.patches + self.artists
 
   def animate_func(self, i):
+    current_time = int(i / 10)  # Convert frame to timestep
+    
     for agent_name, agent in self.combined_schedule.items():
       pos = self.getState(i / 10, agent)
       p = (pos[1], pos[0])
       self.agents[agent_name].center = p
       self.agent_names[agent_name].set_position(p)
+      
+      # Update package position and visibility
+      if agent_name in self.packages:
+        package = self.packages[agent_name]
+        package.set_xy((p[0] - 0.2, p[1] + 0.4))  # Position slightly above and to the left
+        
+        # Check if agent is carrying a package (status == 2)
+        if (self.agent_statuses and 
+            current_time < len(self.agent_statuses) and 
+            agent_name.replace('agent', '').isdigit()):
+          agent_id = int(agent_name.replace('agent', ''))
+          if (agent_id < len(self.agent_statuses[current_time]) and 
+              self.agent_statuses[current_time][agent_id] == 2):
+            package.set_visible(True)
+          else:
+            package.set_visible(False)
+        else:
+          package.set_visible(False)
+        
+        # Update goal position and visibility
+        if agent_name in self.goals:
+          goal = self.goals[agent_name]
+          
+          # Check if agent has a goal location
+          if (self.agent_goal_locations and 
+              current_time < len(self.agent_goal_locations) and 
+              agent_name.replace('agent', '').isdigit()):
+            agent_id = int(agent_name.replace('agent', ''))
+            
+            # Find this agent's goal in the current timestep
+            agent_goal = None
+            for goal_agent_id, goal_location in self.agent_goal_locations[current_time]:
+              if goal_agent_id == agent_id:
+                agent_goal = goal_location
+                break
+            
+            if agent_goal is not None:
+              # Agent has a goal, show green box at goal location
+              goal.set_xy((agent_goal[1] - 0.25, agent_goal[0] - 0.25))  # Convert to (x, y) format
+              goal.set_visible(True)
+              # Position and show goal text
+              goal_text = self.goal_texts[agent_name]
+              goal_text.set_position((agent_goal[1], agent_goal[0]))  # Center of the goal box
+              goal_text.set_visible(True)
+            else:
+              # Agent has no goal, hide the box
+              goal.set_visible(False)
+              self.goal_texts[agent_name].set_visible(False)
+          else:
+            goal.set_visible(False)
+            self.goal_texts[agent_name].set_visible(False)
 
     # reset all colors
     for _,agent in self.agents.items():
@@ -132,7 +210,7 @@ class Animation:
     return pos
 
 
-def visualize(map_dimensions : tuple, obstacles : list, schedule : list, charging_loc : list, delivery_loc : list, agent_id : int, video : str = None, speed : int = 1):
+def visualize(map_dimensions : tuple, obstacles : list, schedule : list, charging_loc : list, delivery_loc : list, agent_id : int, video : str = None, speed : int = 1, agent_statuses : list = None, agent_goal_locations : list = None):
   combined_schedule = {}
    
   for robot_num, sequence in enumerate(schedule):
@@ -141,7 +219,7 @@ def visualize(map_dimensions : tuple, obstacles : list, schedule : list, chargin
       robot_path.append({'t':i, 'x':step[0], 'y':step[1]})
     combined_schedule['agent'+str(robot_num)] = robot_path
   
-  animation = Animation(map_dimensions, obstacles, combined_schedule, charging_loc, delivery_loc, agent_id)
+  animation = Animation(map_dimensions, obstacles, combined_schedule, charging_loc, delivery_loc, agent_id, agent_statuses, agent_goal_locations)
   
 
   if video:
