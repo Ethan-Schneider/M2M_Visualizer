@@ -8,7 +8,7 @@ Colors = ['orange', 'blue', 'green']
 
 
 class Animation:
-  def __init__(self, map_size, obstacles, schedule, charging_loc, delivery_loc, agent_id, agent_statuses=None, agent_goal_locations=None):
+  def __init__(self, map_size, walls, obstacles, schedule, charging_loc, delivery_loc, agent_id, agent_statuses=None, agent_goal_locations=None):
     self.schedule = schedule
     self.combined_schedule = schedule
     self.agent_statuses = agent_statuses
@@ -49,6 +49,10 @@ class Animation:
     for d in delivery_loc:
       x, y = d[0], d[1]
       self.patches.append(Rectangle((y - 0.5, x - 0.5), 1, 1, facecolor='pink', edgecolor='pink'))
+      
+    for b in walls: 
+      x, y = b[0], b[1]
+      self.patches.append(Rectangle((y - 0.5, x - 0.5), 1, 1, facecolor='black', edgecolor='black'))
 
     # create agents:
     self.T = 0
@@ -210,7 +214,7 @@ class Animation:
     return pos
 
 
-def visualize(map_dimensions : tuple, obstacles : list, schedule : list, charging_loc : list, delivery_loc : list, agent_id : int, video : str = None, speed : int = 1, agent_statuses : list = None, agent_goal_locations : list = None):
+def visualize(map_dimensions : tuple, walls : list, obstacles : list, schedule : list, charging_loc : list, delivery_loc : list, agent_id : int, video : str = None, speed : int = 1, agent_statuses : list = None, agent_goal_locations : list = None):
   combined_schedule = {}
    
   for robot_num, sequence in enumerate(schedule):
@@ -219,7 +223,7 @@ def visualize(map_dimensions : tuple, obstacles : list, schedule : list, chargin
       robot_path.append({'t':i, 'x':step[0], 'y':step[1]})
     combined_schedule['agent'+str(robot_num)] = robot_path
   
-  animation = Animation(map_dimensions, obstacles, combined_schedule, charging_loc, delivery_loc, agent_id, agent_statuses, agent_goal_locations)
+  animation = Animation(map_dimensions, walls, obstacles, combined_schedule, charging_loc, delivery_loc, agent_id, agent_statuses, agent_goal_locations)
   
 
   if video:
