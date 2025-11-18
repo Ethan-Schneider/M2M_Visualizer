@@ -2,6 +2,7 @@ from matplotlib.patches import Circle, Rectangle
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import animation
+import os
 
 
 Colors = ['orange', 'blue', 'green']
@@ -102,7 +103,11 @@ class Animation:
                                blit=True)
 
   def save(self, file_name, speed):
-    plt.rcParams['animation.ffmpeg_path'] ='./exe/ffmpeg.exe'
+    
+    if os.name == "nt": # Windows
+      plt.rcParams['animation.ffmpeg_path'] = './exe/ffmpeg.exe'
+    else: # Linux or Mac
+      plt.rcParams['animation.ffmpeg_path'] ='/usr/bin/ffmpeg'
     FFwriter=animation.FFMpegWriter(fps=10, extra_args=['-vcodec', 'libx264'])
     self.anim.save(file_name, writer=FFwriter),
       # savefig_kwargs={"pad_inches": 0, "bbox_inches": "tight"})
