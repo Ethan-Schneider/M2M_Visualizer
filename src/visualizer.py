@@ -83,7 +83,7 @@ class Animation:
       self.patches.append(package)
       
       # Create goal rectangle for this agent (initially invisible)
-      goal = Rectangle((schedule[agent][0]['x'] - 0.25, schedule[agent][0]['y'] - 0.25), 0.5, 0.5, 
+      goal = Rectangle((schedule[agent][0]['x'] - 0.25, schedule[agent][0]['y'] - 0.25), 0.6, 0.6, 
                       facecolor='green', edgecolor='green', alpha=0.6, visible=False)
       self.goals[name] = goal
       self.patches.append(goal)
@@ -168,11 +168,11 @@ class Animation:
             
             if agent_goal is not None:
               # Agent has a goal, show green box at goal location
-              goal.set_xy((agent_goal[1] - 0.25, agent_goal[0] - 0.25))  # Convert to (x, y) format
+              goal.set_xy((agent_goal[1] + 0.75, agent_goal[0] - 0.25))  # Convert to (x, y) format
               goal.set_visible(True)
               # Position and show goal text
               goal_text = self.goal_texts[agent_name]
-              goal_text.set_position((agent_goal[1], agent_goal[0]))  # Center of the goal box
+              goal_text.set_position((agent_goal[1] + 1.0, agent_goal[0]))  # Center of the goal box
               goal_text.set_visible(True)
             else:
               # Agent has no goal, hide the box
