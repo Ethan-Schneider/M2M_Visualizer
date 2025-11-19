@@ -33,10 +33,10 @@ class Animation:
     self.goals = dict()  # Store goal rectangles for each agent
     self.goal_texts = dict()  # Store goal text labels for each agent
     # create boundary patch
-    xmin = 0
-    ymin = 0
-    xmax = map_size[1]
-    ymax = map_size[0]
+    xmin = -0.5
+    ymin = -0.5
+    xmax = map_size[1] - 0.5
+    ymax = map_size[0] - 0.5
 
     print(f"xmin: {xmin}, xmax: {xmax}, ymin: {ymin}, ymax: {ymax}")
 
