@@ -32,6 +32,7 @@ class Animation:
     self.packages = dict()  # Store package rectangles for each agent
     self.goals = dict()  # Store goal rectangles for each agent
     self.goal_texts = dict()  # Store goal text labels for each agent
+    self.sku_rects = []
     # create boundary patch
     xmin = -0.5
     ymin = -0.5
@@ -47,6 +48,7 @@ class Animation:
     for o in obstacles:
       x, y = o[0], o[1]
       self.patches.append(Rectangle((y - 0.5, x - 0.5), 1, 1, facecolor='gray', edgecolor='gray'))
+      self.sku_rects.append(Rectangle((y - 0.5, x - 0.5), 0.8, 0.8, alpha=0.6, facecolor='black', edgecolor='gray', visible=False))
 
     for c in charging_loc:
       x, y = c[0], c[1]
