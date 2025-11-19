@@ -54,7 +54,9 @@ class Animation:
     for o in obstacles:
       x, y = o[0], o[1]
       self.patches.append(Rectangle((y - 0.5, x - 0.5), 1, 1, facecolor='gray', edgecolor='gray'))
-      self.sku_rects[(x, y)] = Rectangle((y - 0.5, x - 0.5), 0.8, 0.8, alpha=0.6, facecolor='black', edgecolor='gray', visible=False)
+      sku_block = Rectangle((y - 0.4, x - 0.4), 0.8, 0.8, alpha=0.6, facecolor='black', edgecolor='gray', visible=False)
+      self.sku_rects[(x, y)] = sku_block
+      self.patches.append(sku_block)
 
     for c in charging_loc:
       x, y = c[0], c[1]
@@ -159,6 +161,8 @@ class Animation:
         
         if sku is None:
           package.set_visible(False)
+          package.set_facecolor('white')
+          package.set_edgecolor('white')
         else:
           package.set_visible(True)
           color_val = sku/max(1, self.num_skus) if self.num_skus > 1 else 0
@@ -201,13 +205,13 @@ class Animation:
             
     sku_locations = self.sku_locations_per_timestep[current_timestep]
     
-    print(f"SKU Rect Locations {self.sku_rects.keys()}")
+    # print(f"SKU Rect Locations {self.sku_rects.keys()}")
     
-    print(f"Sku locations {sku_locations} for timestep {current_timestep}")
+    # print(f"Sku locations {sku_locations} for timestep {current_timestep}")
     
-    print(f"Number of skus in sku_locations {len(sku_locations)} vs number of skus {self.num_skus}")
+    # print(f"Number of skus in sku_locations {len(sku_locations)} vs number of skus {self.num_skus}")
     for sku_id, sku_locs in enumerate(sku_locations):
-      print(f"Sku id {sku_id} has {len(sku_locs)}: {sku_locs}")
+      # print(f"Sku id {sku_id} has {len(sku_locs)}: {sku_locs}")
       for loc in sku_locs:
         x = loc[0]
         y = loc[1] + 1
@@ -217,7 +221,7 @@ class Animation:
           continue
         self.sku_rects[loc].set_visible(True)
         color_val = sku_id/max(1, self.num_skus) if self.num_skus > 1 else 0
-        cm = plt.cm.get_cmap('Pastel2')
+        # cm = plt.cm.get_cmap('Pastel2')
         self.sku_rects[loc].set_facecolor(cm(color_val))
         self.sku_rects[loc].set_edgecolor(cm(color_val))
       
