@@ -20,7 +20,7 @@ class Animation:
     self.agent_sku_carrying = agent_sku_carrying
     self.num_skus = num_skus
     
-    self.fig = plt.figure(frameon=False, figsize=(16, 9), dpi=1920/16)
+    self.fig = plt.figure(frameon=False, figsize=(14, 9), dpi=1920/16)
     self.ax = self.fig.add_subplot(111, aspect='equal')
     self.fig.subplots_adjust(left=0,right=1,bottom=0,top=1, wspace=None, hspace=None)
     # self.ax.set_frame_on(False)
@@ -33,10 +33,10 @@ class Animation:
     self.goals = dict()  # Store goal rectangles for each agent
     self.goal_texts = dict()  # Store goal text labels for each agent
     # create boundary patch
-    xmin = -0.5
-    ymin = -0.5
-    xmax = map_size[1] + 1.5
-    ymax = map_size[0] - 0.5
+    xmin = 0
+    ymin = 0
+    xmax = map_size[1]
+    ymax = map_size[0]
 
     print(f"xmin: {xmin}, xmax: {xmax}, ymin: {ymin}, ymax: {ymax}")
 
