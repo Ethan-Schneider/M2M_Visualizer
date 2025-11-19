@@ -78,6 +78,8 @@ def symbotic_main():
     agent_sku_carrying = data.get('agent_carrying_skus_per_timestep', [])
     num_skus = data.get('num_skus', int)
     
+    sku_locations_per_timestep = data.get('sku_locations_per_timestep', [])
+    
     # Extract the specified timestep range for each agent
     paths = []
     for agent_path in all_paths:
@@ -130,7 +132,7 @@ def symbotic_main():
     
     # For charging and delivery locations, we'll use the map-based ones for now
     # These could be extracted from the JSON data if available
-    visualize(map_array.shape, start_timestep, final_timestep, walls, obstacles, paths, charging_locs, delivery_locs, agent_id, video_file, num_skus, agent_statuses=agent_statuses_range, agent_goal_locations=agent_goal_locations_range, agent_sku_carrying=agent_sku_carrying)
+    visualize(map_array.shape, start_timestep, final_timestep, walls, obstacles, paths, charging_locs, delivery_locs, agent_id, video_file, num_skus, agent_statuses=agent_statuses_range, agent_goal_locations=agent_goal_locations_range, agent_sku_carrying=agent_sku_carrying, sku_locations_per_timestep=sku_locations_per_timestep)
 
 if __name__ == '__main__':
     symbotic_main()
