@@ -9,11 +9,16 @@ Colors = ['orange', 'blue', 'green']
 
 
 class Animation:
-  def __init__(self, map_size, walls, obstacles, schedule, charging_loc, delivery_loc, agent_id, agent_statuses=None, agent_goal_locations=None):
+  def __init__(self, map_size, start_timestep : int, final_timestep : int, walls, obstacles, schedule, charging_loc, delivery_loc, agent_id, agent_statuses=None, agent_goal_locations=None, agent_sku_carrying : list = None, num_skus : int = 0):
     self.schedule = schedule
+    
+    self.start_timestep = start_timestep
+    
     self.combined_schedule = schedule
     self.agent_statuses = agent_statuses
     self.agent_goal_locations = agent_goal_locations
+    self.agent_sku_carrying = agent_sku_carrying
+    self.num_skus = num_skus
     
     self.fig = plt.figure(frameon=False, figsize=(16, 9), dpi=1920/16)
     self.ax = self.fig.add_subplot(111, aspect='equal')
@@ -136,19 +141,24 @@ class Animation:
         package = self.packages[agent_name]
         package.set_xy((p[0] - 0.2, p[1] + 0.4))  # Position slightly above and to the left
         
-        # Check if agent is carrying a package (status == 2)
-        if (self.agent_statuses and 
-            current_time < len(self.agent_statuses) and 
-            agent_name.replace('agent', '').isdigit()):
-          agent_id = int(agent_name.replace('agent', ''))
-          if (agent_id < len(self.agent_statuses[current_time]) and 
-              self.agent_statuses[current_time][agent_id] == 2):
-            package.set_visible(True)
-          else:
-            package.set_visible(False)
-        else:
-          package.set_visible(False)
+        agent_id = int(agent_name.replace('agent', ''))
         
+        current_timestep = self.start_timestep + current_time
+        
+        sku = self.agent_sku_carrying[current_timestep][agent_id]
+        
+        print(f"Agents at timestep {current_timestep} are carrying SKUs {self.agent_sku_carrying[current_timestep]}")
+        # exit()
+        
+        if sku is None:
+          package.set_visible(False)
+        else:
+          package.set_visible(True)
+          color_val = sku/max(1, self.num_skus) if self.num_skus > 1 else 0
+          cm = plt.cm.get_cmap('Pastel2')
+          package.set_facecolor(cm(color_val))
+          package.set_edgecolor(cm(color_val))
+
         # Update goal position and visibility
         if agent_name in self.goals:
           goal = self.goals[agent_name]
@@ -219,7 +229,7 @@ class Animation:
     return pos
 
 
-def visualize(map_dimensions : tuple, walls : list, obstacles : list, schedule : list, charging_loc : list, delivery_loc : list, agent_id : int, video : str = None, speed : int = 1, agent_statuses : list = None, agent_goal_locations : list = None):
+def visualize(map_dimensions : tuple, start_timestep : int, final_timestep : int, walls : list, obstacles : list, schedule : list, charging_loc : list, delivery_loc : list, agent_id : int, video : str = None, num_skus : int = 0, speed : int = 1, agent_statuses : list = None, agent_goal_locations : list = None, agent_sku_carrying : list = None):
   combined_schedule = {}
    
   for robot_num, sequence in enumerate(schedule):
@@ -228,7 +238,7 @@ def visualize(map_dimensions : tuple, walls : list, obstacles : list, schedule :
       robot_path.append({'t':i, 'x':step[0], 'y':step[1]})
     combined_schedule['agent'+str(robot_num)] = robot_path
   
-  animation = Animation(map_dimensions, walls, obstacles, combined_schedule, charging_loc, delivery_loc, agent_id, agent_statuses, agent_goal_locations)
+  animation = Animation(map_dimensions, start_timestep, final_timestep, walls, obstacles, combined_schedule, charging_loc, delivery_loc, agent_id, agent_statuses, agent_goal_locations, agent_sku_carrying, num_skus)
   
 
   if video:
