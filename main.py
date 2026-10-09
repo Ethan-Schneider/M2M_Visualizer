@@ -64,6 +64,7 @@ def symbotic_main():
     obstacles = [(i, j) for i, row in enumerate(map_array) for j, val in enumerate(row) if val.decode('utf-8') == '@']
     charging_locs = [(i, j) for i, row in enumerate(map_array) for j, val in enumerate(row) if val.decode('utf-8') == 'c']
     delivery_locs = [(i, j) for i, row in enumerate(map_array) for j, val in enumerate(row) if val.decode('utf-8') == 'd']
+    walls = [(i, j) for i, row, in enumerate(map_array) for j, val in enumerate(row) if val.decode('utf-8') == 'b']
 
     # Extract paths from the JSON data
     all_paths = data['paths']
@@ -73,6 +74,11 @@ def symbotic_main():
     
     # Extract agent goal locations from the JSON data
     agent_goal_locations = data.get('agent_goal_locations_per_timestep', [])
+    
+    agent_sku_carrying = data.get('agent_carrying_skus_per_timestep', [])
+    num_skus = data.get('num_skus', int)
+    
+    sku_locations_per_timestep = data.get('sku_locations_per_timestep', [])
     
     # Extract the specified timestep range for each agent
     paths = []
@@ -126,7 +132,7 @@ def symbotic_main():
     
     # For charging and delivery locations, we'll use the map-based ones for now
     # These could be extracted from the JSON data if available
-    visualize(map_array.shape, obstacles, paths, charging_locs, delivery_locs, agent_id, video_file, agent_statuses=agent_statuses_range, agent_goal_locations=agent_goal_locations_range)
+    visualize(map_array.shape, all_paths, start_timestep, final_timestep, walls, obstacles, paths, charging_locs, delivery_locs, agent_id, video_file, num_skus, agent_statuses=agent_statuses_range, agent_goal_locations=agent_goal_locations_range, agent_sku_carrying=agent_sku_carrying, sku_locations_per_timestep=sku_locations_per_timestep, agent_goal_locations_per_timestep=agent_goal_locations)
 
 if __name__ == '__main__':
     symbotic_main()

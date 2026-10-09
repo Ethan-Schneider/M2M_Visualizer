@@ -76,6 +76,8 @@ def create_map_image(map_file, output_file=None):
             elif cell_char == '.':
                 # White for empty spaces
                 rect.set_facecolor('white')
+            elif cell_char == 'b':
+                rect.set_facecolor('black')
             else:
                 # Default to white for unknown characters
                 rect.set_facecolor('white')

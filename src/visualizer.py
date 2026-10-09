@@ -1,20 +1,40 @@
 from matplotlib.patches import Circle, Rectangle
 import matplotlib.pyplot as plt
 import numpy as np
+import imageio_ffmpeg
 from matplotlib import animation
+import os
 
 
 Colors = ['orange', 'blue', 'green']
 
 
 class Animation:
-  def __init__(self, map_size, obstacles, schedule, charging_loc, delivery_loc, agent_id, agent_statuses=None, agent_goal_locations=None):
+  def __init__(self, map_size, start_timestep : int, final_timestep : int, 
+               walls, obstacles, schedule, charging_loc, delivery_loc, agent_id, 
+               agent_statuses=None, agent_goal_locations=None, 
+               agent_sku_carrying : list = None, num_skus : int = 0, 
+               sku_locations_per_timestep : list = None, all_paths : list = None,
+               agent_goal_locations_per_timestep : list = None):
+    
     self.schedule = schedule
+    
+    self.map = map_size
+    
+    self.all_paths = all_paths
+    self.num_agents = len(self.all_paths)
+    
+    self.start_timestep = start_timestep
+    
     self.combined_schedule = schedule
     self.agent_statuses = agent_statuses
     self.agent_goal_locations = agent_goal_locations
+    self.agent_sku_carrying = agent_sku_carrying
+    self.num_skus = num_skus
+    self.sku_locations_per_timestep = sku_locations_per_timestep
+    self.agent_goal_locations_per_timestep = agent_goal_locations_per_timestep
     
-    self.fig = plt.figure(frameon=False, figsize=(16, 9), dpi=1920/16)
+    self.fig = plt.figure(frameon=False, figsize=(14, 9), dpi=1920/16)
     self.ax = self.fig.add_subplot(111, aspect='equal')
     self.fig.subplots_adjust(left=0,right=1,bottom=0,top=1, wspace=None, hspace=None)
     # self.ax.set_frame_on(False)
@@ -26,10 +46,11 @@ class Animation:
     self.packages = dict()  # Store package rectangles for each agent
     self.goals = dict()  # Store goal rectangles for each agent
     self.goal_texts = dict()  # Store goal text labels for each agent
+    self.sku_rects = dict()
     # create boundary patch
     xmin = -0.5
     ymin = -0.5
-    xmax = map_size[1] + 1.5
+    xmax = map_size[1] - 0.5
     ymax = map_size[0] - 0.5
 
     print(f"xmin: {xmin}, xmax: {xmax}, ymin: {ymin}, ymax: {ymax}")
@@ -41,6 +62,9 @@ class Animation:
     for o in obstacles:
       x, y = o[0], o[1]
       self.patches.append(Rectangle((y - 0.5, x - 0.5), 1, 1, facecolor='gray', edgecolor='gray'))
+      sku_block = Rectangle((y - 0.4, x - 0.4), 0.8, 0.8, alpha=0.6, facecolor='black', edgecolor='gray', visible=False)
+      self.sku_rects[(x, y)] = sku_block
+      self.patches.append(sku_block)
 
     for c in charging_loc:
       x, y = c[0], c[1]
@@ -49,6 +73,10 @@ class Animation:
     for d in delivery_loc:
       x, y = d[0], d[1]
       self.patches.append(Rectangle((y - 0.5, x - 0.5), 1, 1, facecolor='pink', edgecolor='pink'))
+      
+    for b in walls: 
+      x, y = b[0], b[1]
+      self.patches.append(Rectangle((y - 0.5, x - 0.5), 1, 1, facecolor='black', edgecolor='black'))
 
     # create agents:
     self.T = 0
@@ -56,7 +84,11 @@ class Animation:
     # for d, i in zip(map["agents"], range(0, len(map["agents"]))):
     #   self.patches.append(Rectangle((d["goal"][0] - 0.25, d["goal"][1] - 0.25), 0.5, 0.5, facecolor=Colors[0], edgecolor='black', alpha=0.5))
     
+    ag_vis = [3, 35, 19]
+    
     for i, agent in enumerate(schedule):
+      # if i not in ag_vis:
+      #   continue
       name = agent
       if agent_id == i:
         self.agents[name] = Circle((schedule[agent][0]['x'], schedule[agent][0]['y']), 0.3, facecolor='black', edgecolor='black')
@@ -78,14 +110,14 @@ class Animation:
       self.patches.append(package)
       
       # Create goal rectangle for this agent (initially invisible)
-      goal = Rectangle((schedule[agent][0]['x'] - 0.25, schedule[agent][0]['y'] - 0.25), 0.5, 0.5, 
+      goal = Rectangle((schedule[agent][0]['x'] - 0.25, schedule[agent][0]['y'] - 0.25), 0.6, 0.6, 
                       facecolor='green', edgecolor='green', alpha=0.6, visible=False)
       self.goals[name] = goal
       self.patches.append(goal)
       
       # Create goal text label for this agent (initially invisible)
       goal_text = self.ax.text(schedule[agent][0]['x'], schedule[agent][0]['y'], name.replace('agent', ''), 
-                              color='white', fontweight='bold', visible=False)
+                              color='black', fontweight='bold', visible=False)
       goal_text.set_horizontalalignment('center')
       goal_text.set_verticalalignment('center')
       self.goal_texts[name] = goal_text
@@ -98,10 +130,13 @@ class Animation:
                                blit=True)
 
   def save(self, file_name, speed):
-    plt.rcParams['animation.ffmpeg_path'] ='./exe/ffmpeg.exe'
-    FFwriter=animation.FFMpegWriter(fps=10, extra_args=['-vcodec', 'libx264'])
-    self.anim.save(file_name, writer=FFwriter),
-      # savefig_kwargs={"pad_inches": 0, "bbox_inches": "tight"})
+    # The imageio-ffmpeg package bundles an ffmpeg binary, so there is nothing
+    # to install by hand (no ./exe/ffmpeg.exe, no system ffmpeg).
+    plt.rcParams['animation.ffmpeg_path'] = imageio_ffmpeg.get_ffmpeg_exe()
+    FFwriter = animation.FFMpegWriter(fps=5,
+                                      extra_args=['-vcodec', 'libx264',
+                                                  '-pix_fmt', 'yuv420p'])
+    self.anim.save(file_name, writer=FFwriter)
 
   def show(self):
     plt.show()
@@ -115,67 +150,80 @@ class Animation:
 
   def animate_func(self, i):
     current_time = int(i / 10)  # Convert frame to timestep
+    current_timestep = self.start_timestep + current_time
     
-    for agent_name, agent in self.combined_schedule.items():
-      pos = self.getState(i / 10, agent)
-      p = (pos[1], pos[0])
-      self.agents[agent_name].center = p
-      self.agent_names[agent_name].set_position(p)
+    print(f"current timestep {current_timestep} and current frame {i}")
+    
+    ag_vis = [3, 35, 19]
+    
+    for agent_id in range(self.num_agents):
+      # if agent_id not in ag_vis:
+      #   continue
+      # Update agent state
+      p = self.getState2(current_timestep, i, agent_id)
+      key = 'agent' + str(agent_id)
+      self.agents[key].center = p
+      self.agent_names[key].set_position(p) 
       
-      # Update package position and visibility
-      if agent_name in self.packages:
-        package = self.packages[agent_name]
-        package.set_xy((p[0] - 0.2, p[1] + 0.4))  # Position slightly above and to the left
-        
-        # Check if agent is carrying a package (status == 2)
-        if (self.agent_statuses and 
-            current_time < len(self.agent_statuses) and 
-            agent_name.replace('agent', '').isdigit()):
-          agent_id = int(agent_name.replace('agent', ''))
-          if (agent_id < len(self.agent_statuses[current_time]) and 
-              self.agent_statuses[current_time][agent_id] == 2):
-            package.set_visible(True)
-          else:
-            package.set_visible(False)
-        else:
-          package.set_visible(False)
-        
-        # Update goal position and visibility
-        if agent_name in self.goals:
-          goal = self.goals[agent_name]
+      # Update agent package (placement, color, and if it is holding one or not)
+      package = self.packages[key]
+      package.set_xy((p[0]-0.2, p[1] + 0.4))
+      sku = self.agent_sku_carrying[current_timestep][agent_id]
+      if sku ==[] or sku is None:
+        package.set_visible(False)
+        package.set_facecolor('white')
+        package.set_edgecolor('white')
+      else:
+        sku = sku[0]
+        package.set_visible(True)
+        color_val = sku/max(1, self.num_skus) if self.num_skus > 1 else 0
+        cm = plt.get_cmap('Pastel2')
+        package.set_facecolor(cm(color_val))
+        package.set_edgecolor(cm(color_val))
+      
+      # Update goal location
+      goal_loc = self.agent_goal_locations_per_timestep[current_timestep - 1][agent_id]
+      
+      if goal_loc is None:
+        self.goal_texts[key].set_visible(False)
+      else:
+        self.goal_texts[key].set_visible(True)
+        p = (goal_loc[1] + 1, self.map[0] - goal_loc[0] - 1)
+        self.goal_texts[key].set_position(p)
+            
+    # Update SKU locations
+    sku_locations = self.sku_locations_per_timestep[current_timestep - 1]
+    
+    # Set all sku locations to be invisible at first
+    for sku_loc in self.sku_rects.values():
+      sku_loc.set_visible(False)
+    
+    sku_vis = [0, 1, 2]
+    
+    # Iterate over locations 
+    for sku_id, sku_locs in enumerate(sku_locations):
+      # if sku_id not in sku_vis:
+      #   continue
+      # print(f"Sku id {sku_id} has {len(sku_locs)}: {sku_locs}")
+      for loc in sku_locs:
+        # x = loc[0]
+        # y = loc[1] + 1
+        # loc = (x, y)
+        loc = ((self.map[0] - loc[0] - 1), loc[1] + 1)
+        # try:
+        #   print(f"====================HERE=======================")
+        #   loc = ((self.map[0] - loc[0] - 1), loc[1] + 1)
+        # except:
+        #   continue
           
-          # Check if agent has a goal location
-          if (self.agent_goal_locations and 
-              current_time < len(self.agent_goal_locations) and 
-              agent_name.replace('agent', '').isdigit()):
-            agent_id = int(agent_name.replace('agent', ''))
-            
-            # Find this agent's goal in the current timestep
-            agent_goal = None
-            for goal_agent_id, goal_location in self.agent_goal_locations[current_time]:
-              if goal_agent_id == agent_id:
-                agent_goal = goal_location
-                break
-            
-            if agent_goal is not None:
-              # Agent has a goal, show green box at goal location
-              goal.set_xy((agent_goal[1] - 0.25, agent_goal[0] - 0.25))  # Convert to (x, y) format
-              goal.set_visible(True)
-              # Position and show goal text
-              goal_text = self.goal_texts[agent_name]
-              goal_text.set_position((agent_goal[1], agent_goal[0]))  # Center of the goal box
-              goal_text.set_visible(True)
-            else:
-              # Agent has no goal, hide the box
-              goal.set_visible(False)
-              self.goal_texts[agent_name].set_visible(False)
-          else:
-            goal.set_visible(False)
-            self.goal_texts[agent_name].set_visible(False)
-
-    # reset all colors
-    for _,agent in self.agents.items():
-      agent.set_facecolor(agent.original_face_color)
+        
+        if loc not in self.sku_rects.keys():
+          continue
+        self.sku_rects[loc].set_visible(True)
+        color_val = sku_id/max(1, self.num_skus) if self.num_skus > 1 else 0
+        cm = plt.get_cmap('Pastel2')
+        self.sku_rects[loc].set_facecolor(cm(color_val))
+        self.sku_rects[loc].set_edgecolor(cm(color_val))
 
     # check drive-drive collisions
     agents_array = [agent for _,agent in self.agents.items()]
@@ -208,9 +256,49 @@ class Animation:
     t = (t - d[idx-1]["t"]) / dt
     pos = (posNext - posLast) * t + posLast
     return pos
+  
+  
+  def getState2(self, timestep : int, frame : int, agent_id : int):
+    if frame % 10 == 0:
+      loc = self.all_paths[agent_id][timestep]
+      p = (loc[1], self.map[0] - loc[0] - 1)
+      return p
+    else:
+      loc1 = self.all_paths[agent_id][timestep]
+      loc2 = self.all_paths[agent_id][timestep + 1]
+      frame = frame%10
+      
+      dt = frame/10
+      dx = 0
+      dy = 0
+      
+      x_dif = loc2[1] - loc1[1]
+      y_dif = (self.map[0] - loc2[0] - 1) - (self.map[0] - loc1[0] - 1)
+
+      
+      if x_dif == 0:
+        dx = 0
+      elif x_dif < 0:
+        dx = -1*dt
+      else:
+        dx = dt
+      
+      if y_dif == 0:
+        dy = 0
+      elif y_dif < 0:
+        dy = -1*dt
+      else:
+        dy = dt
+      
+      p = (loc1[1] + dx, (self.map[0] - loc1[0] - 1) + dy)
+      return p
 
 
-def visualize(map_dimensions : tuple, obstacles : list, schedule : list, charging_loc : list, delivery_loc : list, agent_id : int, video : str = None, speed : int = 1, agent_statuses : list = None, agent_goal_locations : list = None):
+def visualize(map_dimensions : tuple, all_paths : list, start_timestep : int, final_timestep : int, walls : list, obstacles : list, schedule : list, 
+              charging_loc : list, delivery_loc : list, agent_id : int, video : str = None, num_skus : int = 0, speed : int = 1, 
+              agent_statuses : list = None, agent_goal_locations : list = None, agent_sku_carrying : list = None, 
+              sku_locations_per_timestep : list = None, agent_goal_locations_per_timestep : list = None):
+  
   combined_schedule = {}
    
   for robot_num, sequence in enumerate(schedule):
@@ -219,7 +307,10 @@ def visualize(map_dimensions : tuple, obstacles : list, schedule : list, chargin
       robot_path.append({'t':i, 'x':step[0], 'y':step[1]})
     combined_schedule['agent'+str(robot_num)] = robot_path
   
-  animation = Animation(map_dimensions, obstacles, combined_schedule, charging_loc, delivery_loc, agent_id, agent_statuses, agent_goal_locations)
+  animation = Animation(map_dimensions, start_timestep, final_timestep, walls, obstacles, 
+                        combined_schedule, charging_loc, delivery_loc, agent_id, agent_statuses, 
+                        agent_goal_locations, agent_sku_carrying, num_skus, sku_locations_per_timestep, all_paths,
+                        agent_goal_locations_per_timestep=agent_goal_locations_per_timestep)
   
 
   if video:
