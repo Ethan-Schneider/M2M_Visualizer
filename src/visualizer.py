@@ -130,13 +130,20 @@ class Animation:
                                blit=True)
 
   def save(self, file_name, speed):
+    # A bare file name lands in the output folder, the same way input data is
+    # read from the data folder; an explicit path is left alone.
+    if not os.path.dirname(file_name):
+      file_name = os.path.join('output', file_name)
+    os.makedirs(os.path.dirname(file_name), exist_ok=True)
+
     # The imageio-ffmpeg package bundles an ffmpeg binary, so there is nothing
     # to install by hand (no ./exe/ffmpeg.exe, no system ffmpeg).
     plt.rcParams['animation.ffmpeg_path'] = imageio_ffmpeg.get_ffmpeg_exe()
-    FFwriter = animation.FFMpegWriter(fps=5,
+    FFwriter = animation.FFMpegWriter(fps=10,
                                       extra_args=['-vcodec', 'libx264',
                                                   '-pix_fmt', 'yuv420p'])
     self.anim.save(file_name, writer=FFwriter)
+    print(f"Saved video to {file_name}")
 
   def show(self):
     plt.show()
