@@ -1,6 +1,7 @@
 from matplotlib.patches import Circle, Rectangle
 import matplotlib.pyplot as plt
 import numpy as np
+import imageio_ffmpeg
 from matplotlib import animation
 import os
 
@@ -129,14 +130,13 @@ class Animation:
                                blit=True)
 
   def save(self, file_name, speed):
-    
-    if os.name == "nt": # Windows
-      plt.rcParams['animation.ffmpeg_path'] = './exe/ffmpeg.exe'
-    else: # Linux or Mac
-      plt.rcParams['animation.ffmpeg_path'] ='/usr/bin/ffmpeg'
-    FFwriter=animation.FFMpegWriter(fps=10, extra_args=['-vcodec', 'libx264'])
-    self.anim.save(file_name, writer=FFwriter),
-      # savefig_kwargs={"pad_inches": 0, "bbox_inches": "tight"})
+    # The imageio-ffmpeg package bundles an ffmpeg binary, so there is nothing
+    # to install by hand (no ./exe/ffmpeg.exe, no system ffmpeg).
+    plt.rcParams['animation.ffmpeg_path'] = imageio_ffmpeg.get_ffmpeg_exe()
+    FFwriter = animation.FFMpegWriter(fps=5,
+                                      extra_args=['-vcodec', 'libx264',
+                                                  '-pix_fmt', 'yuv420p'])
+    self.anim.save(file_name, writer=FFwriter)
 
   def show(self):
     plt.show()
@@ -169,14 +169,15 @@ class Animation:
       package = self.packages[key]
       package.set_xy((p[0]-0.2, p[1] + 0.4))
       sku = self.agent_sku_carrying[current_timestep][agent_id]
-      if sku is None:
+      if sku ==[] or sku is None:
         package.set_visible(False)
         package.set_facecolor('white')
         package.set_edgecolor('white')
       else:
+        sku = sku[0]
         package.set_visible(True)
         color_val = sku/max(1, self.num_skus) if self.num_skus > 1 else 0
-        cm = plt.cm.get_cmap('Pastel2')
+        cm = plt.get_cmap('Pastel2')
         package.set_facecolor(cm(color_val))
         package.set_edgecolor(cm(color_val))
       
@@ -220,7 +221,7 @@ class Animation:
           continue
         self.sku_rects[loc].set_visible(True)
         color_val = sku_id/max(1, self.num_skus) if self.num_skus > 1 else 0
-        cm = plt.cm.get_cmap('Pastel2')
+        cm = plt.get_cmap('Pastel2')
         self.sku_rects[loc].set_facecolor(cm(color_val))
         self.sku_rects[loc].set_edgecolor(cm(color_val))
 

@@ -3,19 +3,26 @@ import numpy as np
 def load_map(file_path):
     with open(file_path, 'r') as file:
         lines = file.readlines()
-    
+
+    # Some map files start with a comma-separated header (rows, cols, ...)
+    # followed by a blank line; keep only the grid rows.
+    grid = [line.rstrip('\n').rstrip() for line in lines]
+    if grid and ',' in grid[0]:
+        grid = grid[1:]
+    grid = [row for row in grid if row]
+
     # Determine the shape of the map
-    rows = len(lines)
-    cols = len(lines[0].strip())
-    
-    # Initialize numpy array
-    map_array = np.chararray((rows, cols))
-    
+    rows = len(grid)
+    cols = max(len(row) for row in grid)
+
+    # Initialize numpy array (byte chars; np.chararray was removed in numpy 2.0)
+    map_array = np.zeros((rows, cols), dtype='S1')
+
     # Fill the numpy array with characters from the map file
-    for i, line in enumerate(lines):
-        for j, c in enumerate(line.strip()):
+    for i, line in enumerate(grid):
+        for j, c in enumerate(line):
             map_array[i, j] = c
-    
+
     return map_array
 
 
